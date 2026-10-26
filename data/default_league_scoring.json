@@ -1,0 +1,14 @@
+{
+  "_what": "Default league scoring rules, used when SLEEPER_LEAGUE_ID is not set. Point values only: a 12-team superflex full-PPR league. No league ID, name, or members.",
+  "scoring_settings": {
+    "fum_lost": -2.0,
+    "pass_int": -1.0,
+    "pass_td": 4.0,
+    "pass_yd": 0.04,
+    "rec": 1.0,
+    "rec_td": 6.0,
+    "rec_yd": 0.1,
+    "rush_td": 6.0,
+    "rush_yd": 0.1
+  }
+}

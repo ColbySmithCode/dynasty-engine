@@ -1,0 +1,69 @@
+{
+  "_what": "G10.3 calibration \u2014 survival Clock-A OOS reliability + projection PPG 90% interval coverage. Persisted for the doc-consistency canon + 5x byte-check.",
+  "survival": {
+    "marking": "PASS-BUT-UNINFORMATIVE",
+    "slope": 1.0348,
+    "slope_ci_lo": 0.9342,
+    "slope_ci_hi": 1.1332,
+    "intercept": 0.0045,
+    "intercept_ci_lo": -0.005,
+    "intercept_ci_hi": 0.0141,
+    "ece": 0.0114,
+    "ece_null_lo": 0.0027,
+    "ece_null_hi": 0.0078,
+    "ece_null_p": 0.0,
+    "n": 14574,
+    "players": 2353,
+    "events": 1661,
+    "decision_relevant_band": [
+      0.9,
+      1.1
+    ],
+    "ece_decision_relevant": 0.03
+  },
+  "coverage": {
+    "marking": "PASS-CONSERVATIVE",
+    "coverage": 0.9126,
+    "ci_lo": 0.9013,
+    "ci_hi": 0.9236,
+    "nominal": 0.9,
+    "n": 3294,
+    "players": 1064,
+    "mbar": 3.1,
+    "icc_player": 0.1173,
+    "design_effect_measured": 1.25,
+    "effective_n_kish": 769.5,
+    "design_effect_kish_max": 4.28,
+    "per_fold": {
+      "2019": [
+        0.8693,
+        436
+      ],
+      "2020": [
+        0.9077,
+        466
+      ],
+      "2021": [
+        0.9155,
+        497
+      ],
+      "2022": [
+        0.9329,
+        492
+      ],
+      "2023": [
+        0.8948,
+        466
+      ],
+      "2024": [
+        0.9249,
+        466
+      ],
+      "2025": [
+        0.9384,
+        471
+      ]
+    }
+  },
+  "vintage": "2026-07-30"
+}

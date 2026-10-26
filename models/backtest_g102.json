@@ -1,0 +1,28 @@
+{
+  "_what": "G10.2 backtest \u2014 engine projection vs ADP + last-year-PPG, forward per-position top-12 (PPR), per-fold refit, player-clustered paired bootstrap of dAUC.",
+  "n_player_seasons": 1454,
+  "n_players": 499,
+  "events": 301,
+  "base_rate": 0.207,
+  "auc_model": 0.7179,
+  "combined_verdict": "FAILS-BAR",
+  "headline": "the projection LOSES to last-year-PPG under MATCHED information sets",
+  "vs_last_year_ppg": {
+    "metric": "dAUC(model-lastYearPPG)",
+    "point": -0.0224,
+    "ci_lo": -0.0365,
+    "ci_hi": -0.0085,
+    "call": "LOSES",
+    "information_sets": "matched (both <=Y-1)"
+  },
+  "vs_adp": {
+    "metric": "dAUC(model-ADP)",
+    "point": -0.0577,
+    "ci_lo": -0.0874,
+    "ci_hi": -0.0277,
+    "call": "LOSES",
+    "information_sets": "asymmetric (ADP embeds start-of-Y offseason info)"
+  },
+  "must_carry": "projection loses to last-year-PPG under matched information sets (dAUC -0.0224, CI [-0.0365, -0.0085])",
+  "vintage": "2026-07-30"
+}

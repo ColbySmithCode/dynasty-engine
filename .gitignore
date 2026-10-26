@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# uv
+# (keep uv.lock committed for reproducibility)
+
+# Data — raw dumps and warehouse are large / regenerable, not source
+data/raw/**
+data/staging/**
+data/warehouse.db
+data/warehouse.db.wal
+!data/raw/.gitkeep
+!data/staging/.gitkeep
+
+# Models artifacts (regenerable)
+models/*.pkl
+models/*.joblib
+
+# Logs & health markers (transient run output)
+logs/*
+!logs/.gitkeep
+HEALTH_FAIL
+
+# Secrets
+.env
+secrets/
+
+# OS
+.DS_Store
+
+# Added before first push (2026-10-06)
+data/snapshots/
+.env.local
+*.pem
+*.key
+node_modules/
+_to_delete/
+data/.refresh.lock
+CLAUDE.md
+.claude/
+claude/
+docs/review/

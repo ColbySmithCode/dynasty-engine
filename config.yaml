@@ -1,0 +1,340 @@
+# ============================================================================
+# dynasty-engine — single source of configuration
+# No magic numbers in code. Everything tunable lives here.
+# ============================================================================
+
+# ---- Time horizon ----------------------------------------------------------
+seasons:
+  start: 2010          # nflverse backbone start
+  # `end` is resolved at runtime from Sleeper /state/nfl unless pinned here.
+  end: null            # null => current season (auto-detected)
+
+# ---- Paths (relative to repo root unless absolute) -------------------------
+paths:
+  data_raw: data/raw            # immutable source dumps: {source}/{season}/
+  data_staging: data/staging    # cleaned, typed parquet
+  warehouse: data/warehouse.db  # DuckDB — single source of truth
+  models: models                # serialized fitted artifacts
+  exports: exports              # compact artifacts for the chat assistant
+  logs: logs
+  manual_id_overrides: data/manual_id_overrides.csv
+  id_review_queue: data/id_review_queue.csv
+
+# ---- Your Sleeper league ---------------------------------------------------
+# league_id is optional. Set SLEEPER_LEAGUE_ID in .env (see .env.example) to
+# pull your own league's live scoring settings. Leave it unset to use the bundled
+# default league scoring in data/default_league_scoring.json.
+sleeper:
+  base_url: https://api.sleeper.app/v1
+  league_id: null                 # overridden by SLEEPER_LEAGUE_ID env var
+  walk_previous_league_id: false  # set true to walk previous seasons of your league
+  user_agent: "dynasty-engine/0.1 (personal analytics project)"
+  players_refresh_hours: 24      # /players/nfl is ~5MB; cache aggressively
+
+# ---- Scoring profiles ------------------------------------------------------
+# First-class dimension. Fantasy points are computed FROM play-by-play under
+# each profile. `your_league` is parsed live from Sleeper scoring_settings and
+# overrides the placeholder below at runtime.
+scoring_profiles:
+  std:
+    pass_yd: 0.04
+    pass_td: 4
+    pass_int: -2
+    rush_yd: 0.1
+    rush_td: 6
+    rec: 0.0
+    rec_yd: 0.1
+    rec_td: 6
+    fumble_lost: -2
+    two_pt: 2
+  half_ppr:
+    pass_yd: 0.04
+    pass_td: 4
+    pass_int: -2
+    rush_yd: 0.1
+    rush_td: 6
+    rec: 0.5
+    rec_yd: 0.1
+    rec_td: 6
+    fumble_lost: -2
+    two_pt: 2
+  ppr:
+    pass_yd: 0.04
+    pass_td: 4
+    pass_int: -2
+    rush_yd: 0.1
+    rush_td: 6
+    rec: 1.0
+    rec_yd: 0.1
+    rec_td: 6
+    fumble_lost: -2
+    two_pt: 2
+  te_premium:
+    pass_yd: 0.04
+    pass_td: 4
+    pass_int: -2
+    rush_yd: 0.1
+    rush_td: 6
+    rec: 1.0
+    rec_te_bonus: 0.5          # additional per-reception for TE
+    rec_yd: 0.1
+    rec_td: 6
+    fumble_lost: -2
+    two_pt: 2
+  superflex:
+    # Same point rules as PPR; the "superflex" effect is a roster-slot rule
+    # (QB startable in flex), applied in the replacement-level / lineup layer,
+    # not in per-play scoring. Kept as a distinct profile so downstream code
+    # can request it explicitly.
+    pass_yd: 0.04
+    pass_td: 4
+    pass_int: -2
+    rush_yd: 0.1
+    rush_td: 6
+    rec: 1.0
+    rec_yd: 0.1
+    rec_td: 6
+    fumble_lost: -2
+    two_pt: 2
+  # your_league: {}  # injected at runtime from Sleeper
+
+# ---- Roster construction (for replacement level & lineup sim) --------------
+# Overridden by live Sleeper roster_positions when league_id is set.
+roster:
+  # Default target format: 12-team, superflex, full-PPR, no TE premium.
+  # These defaults mirror a real Sleeper league's settings (roster_positions
+  # includes SUPER_FLEX, scoring_settings.rec = 1.0, no bonus_rec_te).
+  # Edit them to match your own league.
+  settings_source: sleeper_api_live        # live_read | inferred | assumed
+  settings_confirmed: true
+  league_size: 12
+  starters:
+    QB: 1
+    RB: 2
+    WR: 3
+    TE: 1
+    FLEX: 2          # RB/WR/TE
+    SUPERFLEX: 1     # QB/RB/WR/TE — drives QB valuation
+  bench: 20
+  flex_eligible: [RB, WR, TE]
+  superflex_eligible: [QB, RB, WR, TE]
+  # MEASURED, not assumed: fraction of SUPER_FLEX slots actually started by a QB,
+  # from 4,653 started SF lineups across the 400-league dynasty corpus (2026-07-27).
+  # Overall 0.783; stable 0.75-0.83 across 2021-2024. Non-QB SF split WR .51/RB .28/TE .22.
+  sf_qb_fill_rate: 0.783
+  sf_nonqb_split: {WR: 0.51, RB: 0.28, TE: 0.22}
+  flex_split: {RB: 0.40, WR: 0.45, TE: 0.15}
+  # your_league scoring profile is parsed live from scoring_settings (43 keys).
+  your_league_base: ppr           # rec=1.0, no bonus_rec_te
+  has_idp_or_dst: true            # sack/pts_allow/st_td present — team/IDP scoring
+
+# ---- MyFantasyLeague ADP sweep --------------------------------------------
+# Cartesian: seasons × format × ppr × league_size × periods.
+mfl:
+  base_url: https://api.myfantasyleague.com
+  rate_limit_per_sec: 1
+  user_agent: "dynasty-engine/0.1 (personal analytics project)"
+  cutoff: 5
+  details: 1
+  # is_keeper uses LETTER codes on the current API (numeric 0/1/2 is rejected):
+  #   N = redraft, K = keeper/dynasty-startup, R = rookie-only. Default NKR=all.
+  # (Verified live 2026-07; there is no separate "dynasty" code — it lives in K.)
+  formats:
+    redraft: N
+    dynasty: K
+    rookie: R
+  is_ppr: [-1, 0, 1]           # all / standard / ppr
+  fcount: [10, 12, 14]         # league sizes (valid: 8,10,12,14,16)
+  # ~5 in-season consensus snapshots. MFL PERIOD tokens (valid set includes
+  # ALL, RECENT, DRAFT, JUNE, JULY, AUG1, AUG15, START, MID, PLAYOFF).
+  periods: [DRAFT, JUNE, JULY, AUG1, AUG15]
+
+# ---- DynastyProcess (GitHub raw CSV/parquet) -------------------------------
+dynastyprocess:
+  base_url: https://raw.githubusercontent.com/dynastyprocess/data/master/files
+  files:
+    values_players: values-players.csv
+    values_picks: values-picks.csv
+    player_ids: db_playerids.csv
+    fpecr: db_fpecr.parquet
+  snapshot_weekly: true
+
+# ---- Pro Football Reference (backfill only — strict limit) -----------------
+pfr:
+  base_url: https://www.pro-football-reference.com
+  rate_limit_per_min: 18        # hard ceiling is 20; stay under
+  user_agent: "dynasty-engine/0.1 (personal analytics project)"
+  enabled: false                # opt-in; only for documented gaps
+
+# ---- Phase 1G: Dynasty Market Corpus ---------------------------------------
+# I have no league history, so build a corpus of OTHER people's dynasty history.
+# See docs/ADDENDUM_A.md for rationale + acceptable-use rules.
+corpus:
+  # 1G-a: MFL aggregate ADP is the load-bearing source and lives in the 1B
+  #       sweep above (formats redraft/dynasty/rookie via is_keeper 0/1/2).
+  #       Nothing extra to configure here — just DO NOT drop dynasty/rookie.
+
+  # 1G-b: Scott Fish Bowl public datasets (GitHub, no scraping)
+  sfb:
+    enabled: true
+    base_url: https://raw.githubusercontent.com
+    api_url: https://api.github.com
+    # repos confirmed at probe time; discovery also scans the dynastyprocess org
+    repos:
+      - dynastyprocess/data.sfb14
+      - dynastyprocess/data-sfb13
+    org_scan: dynastyprocess    # list repos matching /sfb/i to catch siblings
+
+  # 1G-c: Sleeper public-league snowball (auth-free, but SCOPED)
+  sleeper_snowball:
+    enabled: true
+    max_leagues: 400            # a few HUNDRED, not tens of thousands
+    max_seasons_back: 7         # Sleeper launched ~2017-18; ~7 seasons realistic
+    rate_limit_per_sec: 8       # WELL under 1000/min
+    seed_leagues: []            # optional known dynasty league_ids to seed BFS
+    seed_from_sfb: true         # else/also seed from SFB Sleeper leagues (public)
+    # discovery: league -> /league/{id}/users -> /user/{uid}/leagues/nfl/{season}
+    dynasty_only: true          # keep settings.type == 2 (dynasty/keeper)
+    max_users_expanded: 1200    # cap BFS user expansion
+    transaction_leagues: 150    # pull transactions for at most N leagues (logged)
+    transaction_weeks: 17       # weeks 1..N per league season
+
+  # 1G-d: HARD RULE — never mass-harvest individual MFL leagues.
+  #       MFL API is current-year-only for most calls and their AUP prohibits
+  #       collecting user info without permission. Aggregate ADP/AAV reports ONLY.
+  mfl_per_league_harvest: forbidden
+
+# ---- Supplementary sources (Part 4 registry) -------------------------------
+supplementary:
+  keeptradecut:
+    enabled: false
+  fantasypros:
+    enabled: false
+
+# ---- Identity resolution ---------------------------------------------------
+identity:
+  fuzzy_threshold: 92           # rapidfuzz; >=92 => review queue, never auto-apply
+  match_rate_gate: 0.98         # GATE 2 floor on fantasy-relevant players
+
+# ---- Models ----------------------------------------------------------------
+models:
+  seed: 1729                    # seed EVERYTHING for reproducibility
+  relevance:
+    min_games: 8                # "fantasy relevant" = >= replacement PPG in >= N games
+  aging:
+    # PRE-REGISTERED before seeing any results (locked 2026-07-27). Delta method only.
+    metric: ppg_ppr             # Δ of points-per-played-game, PPR
+    # standardized 6->8 to match the survival relevance/availability conditioning
+    # (5.2 item 5 coherence). Aging E[PPG|play] and availability P(play) now share
+    # the same "played >= 8 games" conditioning set.
+    min_games_per_season: 8     # both seasons of a pair must have >= this many played games
+    weight: min_games           # each pair weighted by min(games_Y, games_Y+1)
+    age_min: 21
+    age_max: 34                 # ages outside [21,34] bucketed into the endpoints
+    min_bucket_n: 20            # don't report a CI for age buckets with fewer pairs
+    ci: 0.95
+    exclude_seasons: [2026]     # no data
+    # RB archetype split (pre-registered threshold): receiving back vs early-down
+    rb_receiving_target_share: 0.14   # season avg target_share >= this => receiving back
+    positions: [QB, RB, WR, TE]
+  backtest:
+    train_through: 2022
+    test_seasons: [2023, 2024, 2025]   # keep 2025 — most era-relevant holdout
+
+  # ---- Decisions forced by GATE 1 data findings (see docs/ADDENDUM_B.md) ----
+  rookie_hitrate:
+    # Decision 1: rookie ADP unusable pre-2019 -> build hit rates off NFL draft
+    # capital, calibrate slot->capital mapping on 2021+ rookie ADP, back-project.
+    source: draft_capital           # NOT rookie_adp
+    calibration_min_season: 2021
+    carry_mapping_uncertainty: true # explicit error term in pick valuation
+  adp_studies:
+    # Decision 2: two separate studies, never merged.
+    legacy_snapshot_period: AUG15   # single snapshot for 2011-2018
+    velocity_min_season: 2019       # multi-snapshot velocity only 2019+
+  projection:
+    # Phase 5.5 Bayesian projection (pre-registered).
+    horizon_years: 4            # project t = 1..N
+    mc_draws: 10000             # posterior Monte Carlo draws
+    shrinkage_k_games: 10       # partial-pool toward positional mean by this pseudo-count
+    recency_halflife_years: 1.5 # weight recent seasons more in the prior
+    availability_age_slope: 0.010  # games-played rate declines ~1%/yr of age past peak
+    wide_delta_se: 2.0          # se for aging buckets with n<min (QB-like uncertainty)
+  superflex_translation:
+    # Decision 3: MFL ADP has no SF dim; league IS superflex.
+    enabled: true
+    sources: [sleeper_corpus, dynastyprocess_value_2qb]
+    corpus_validate: true           # validate vs actual corpus draft pos, per position
+    exclude_te_premium_for_te: true # corpus is ~95% TE-prem; league is not
+    # Decision 5: corpus is 2020-2026 only; do not back-project the translation.
+    no_backproject_before: 2020
+    stability_test_years: [2020, 2021, 2022, 2023, 2024]  # report drift, don't assume constant
+    strategy_history_window: [2011, 2021]   # 1QB-framed strategy findings only
+    qb_calibration_window: [2020, 2022]     # narrow SF calibration
+  dynasty_behavior:
+    # Decision 4: SFB is best-ball redraft — demoted. Dynasty behavior + ADP-
+    # deviation noise model come from the snowball corpus, NOT SFB.
+    source: sleeper_corpus
+    sfb_role: draft_flow_mechanics_only     # supplementary; must not inform strategy
+
+  # ---- Phase 6.5: Startup Draft Backtester (see docs/PREREG_6_5.md) ----------
+  # Every number here is pre-registered. Do not tune to results.
+  startup_backtest:
+    sims_per_cell: 400            # per (draft-year x slot x strategy x pool x opp-field);
+                                   # for ESTIMATOR STABILITY, not uncertainty (R3-8)
+    boot_n: 20                    # league-resample replicates for clustered CI (R3-8)
+    boot_sims: 40                 # sims per bootstrap replicate
+    window_years: 5               # draft-year-inclusive: 2020->[2020..2024], 2021->[2021..2025]
+    window_sensitivity: [3, 4, 5] # R3-3 report ranking stability across window length
+    last_complete_season: 2025    # 2026 excluded (no data)
+    draft_rounds: 15              # startup rounds (rounds>=15 => startup, R2 §0)
+    board_size: 300               # top-N market board considered per year
+    slots: [1, 6, 11, 12]         # early / mid / late / extreme-turn (slot 12); reported per-slot, no aggregation
+    # Block 1: superflex, native SF corpus board + SF lineup, BOTH pools
+    block1_years: [2020, 2021]
+    # Block 2: 1QB framing, MFL K ADP board + 1QB lineup, CONSENSUS-only, NON-TRANSFER
+    block2_years: [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+    era_split: 2017               # decayed-edge: 2011-2016 vs 2017-2019 (Block 2)
+    corpus_thin_min: 20           # (position x round) cells with n<this => corpus-thin, excluded
+    # NFL-draft day-1 cutoffs for the pre/post cohort split (R3-3)
+    nfl_draft_day1: {2020: "2020-04-23", 2021: "2021-04-29"}
+    startup_rounds_min: 15
+    lineup:
+      oneqb:  {QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 2}                 # Block 2
+      superflex: {QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 2, SUPERFLEX: 1} # Block 1
+      flex_eligible: [RB, WR, TE]
+      superflex_eligible: [QB, RB, WR, TE]
+    # roster construction caps/minimums (startable + realistic depth)
+    roster_caps: {QB: 3, RB: 6, WR: 7, TE: 3}
+    roster_mins: {QB: 1, RB: 2, WR: 3, TE: 1}      # SF raises QB min to 2 (applied in code)
+    # fixed, hand-set ex-ante priors (NOT fitted on any outcome season; R3/§6)
+    exante:
+      recency_halflife_years: 1.5
+      peak_age: {QB: 28, RB: 25, WR: 26, TE: 27}
+      pre_peak_ramp_per_yr: 0.04     # value ramps toward peak
+      post_peak_decline_per_yr: 0.07 # and declines after
+      capital_tier_value: {1: 1.00, 2: 0.72, 3: 0.55, 4: 0.42, 5: 0.32, 6: 0.24, 7: 0.18, 8: 0.10}
+      rookie_udfa_tier: 8            # missing draft_round -> UDFA (R2 §7, validated R3-7)
+    # opponent fields swept (R3-5); pools (A/B); keys (R3-4)
+    # Opponent model = ADP-board best-available with a bounded REACH WINDOW (uniform among the
+    # next-K available board players). K calibrated to corpus draft-position dispersion.
+    # NOTE: a pure per-slot empirical draw (slot_only) was tried and REJECTED — independent
+    # draws let studs fall through (11 opponents can all "miss" the 1.01), an artifact that
+    # pinned optimal-me at a ~0.95 ceiling. The reach window ensures studs get consumed.
+    reach_window: {consensus: 3, corpus_draw: 8}
+    opponent_fields: [consensus, corpus_draw]
+    corpus_avg_keys: [pos_round, pos_exact, slot_only]  # pos_round primary; others reported
+    whale_one_vote_per_cell: true   # one-manager-one-vote per (position,round) draw (R2 item6)
+
+# ---- Trade engine ----------------------------------------------------------
+trade_engine:
+  discount_delta: 0.82          # per-year; contenders 0.90+, rebuilders 0.70
+  horizon_years: 5              # t = 0..N
+  monte_carlo_draws: 10000
+  fairness_band: 0.05           # +/- 5% E[Δ] target for the fairness solver
+
+# ---- HTTP / caching --------------------------------------------------------
+http:
+  timeout_seconds: 30
+  max_retries: 4
+  backoff_base_seconds: 1.5

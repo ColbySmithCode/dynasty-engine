@@ -1,0 +1,6 @@
+# dynasty-engine refresh — CRON FALLBACK ONLY (prefer launchd; see docs/PHASE7_PLAN.md item 2).
+# BSD cron here does NOT honor CRON_TZ (silent no-op; uses local time) and does NOT catch up
+# jobs missed while asleep. launchd catches up on wake -> use launchd. FAST Wed / FULL Thu 06:00 ET
+# on DIFFERENT days (no same-morning DuckDB write contention); lockfile is the backstop.
+0 6 * * 3  cd /path/to/dynasty-engine && $HOME/.local/bin/uv run python -m jobs.refresh --mode fast >> logs/refresh_fast.log 2>&1
+0 6 * * 4  cd /path/to/dynasty-engine && $HOME/.local/bin/uv run python -m jobs.refresh --mode full >> logs/refresh_full.log 2>&1

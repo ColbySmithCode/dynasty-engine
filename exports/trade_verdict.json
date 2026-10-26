@@ -1,0 +1,12 @@
+{
+  "consensus": {
+    "e_delta_082": 10.8,
+    "winner": "package",
+    "verdict_across_delta": "package WINS"
+  },
+  "corpus": {
+    "e_delta_082": -80.0,
+    "winner": "1.11",
+    "verdict_across_delta": "1.11 WINS"
+  }
+}

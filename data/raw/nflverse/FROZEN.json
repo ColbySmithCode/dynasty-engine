@@ -1,0 +1,24 @@
+{
+  "_what": "Versioned freeze of the nflverse HISTORICAL raw (2013-2025) that the warehouse build reads. Hermetic ONLY IF every file named here exists (asserted at build start by transform.warehouse.assert_frozen_files_exist): _cached_nflverse reads the historical cache; teams_lookup feeds dim_team.",
+  "vintage": "2026-07-29",
+  "input_signature_2013_2025": "d9c462197311a92e",
+  "teams_lookup": {
+    "_what": "nfl.load_teams() static team lookup for dim_team (transform/warehouse.py:322-329). Was MISSING for phases 3-9, so every warehouse build made a LIVE nfl.load_teams() network call -- the 'network-free after caching' claim was UNVERIFIED and FALSE. Frozen 2026-07-30.",
+    "file": "data/raw/nflverse/teams/all.parquet",
+    "rows": 36,
+    "note_rows": "36 rows (incl. historical/relocated abbrevs), NOT the '32' the prior waiver stated.",
+    "content_sha256": "1d1d105ff0b0fca8806bfa047c96ef001d150c0bcbba481db5babbafa1f36636",
+    "nflreadpy_version": "0.1.5",
+    "fetched_utc": "2026-07-30T19:28:31Z",
+    "vintage": "2026-07-30",
+    "VINTAGE_MISMATCH": "fetched 2026-07-30 = ONE DAY LATER than the 2013-2025 raw vintage 2026-07-29. Teams data is static so content is near-certainly identical to a 2026-07-29 fetch, but this is a later fetch and is recorded explicitly, NOT absorbed into the 2026-07-29 vintage."
+  },
+  "bump_procedure": [
+    "1. Re-pull historical raw:  VIGIL_UNFREEZE=1 uv run python -m ingest.nflverse --force",
+    "2. Rebuild + capture input hashes:  uv run python -m jobs.refresh --mode full --only warehouse,metrics",
+    "3. Re-run reproducibility:  uv run python -m tests.test_reproducibility  AND  uv run python -m jobs.repro_check",
+    "4. If artifacts changed, that is an UPSTREAM REVISION (escalate, re-baseline drift_baseline.json), not drift.",
+    "5. Update this vintage + input_signature and commit."
+  ],
+  "learning_about_upstream_corrections": "Because the build no longer sees live nflverse, upstream corrections are invisible by design. A separate MONTHLY manual probe (bump step 1 into a temp, diff input hashes) surfaces them; a diff triggers a deliberate, reviewed re-baseline rather than silent drift."
+}

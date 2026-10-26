@@ -1,0 +1,40 @@
+{
+  "mode": "full",
+  "updated": 1785335302,
+  "sources_as_of": {
+    "nflverse_pulled": "2026-07-29",
+    "mfl_adp_pulled": "2026-07-29",
+    "dynastyprocess_snapshot": "2026-07-29",
+    "corpus_frozen": "2026-07-27"
+  },
+  "tables": {
+    "fact_player_week": {
+      "last_successful_refresh": 1785335302,
+      "stale": false
+    },
+    "fact_adp": {
+      "last_successful_refresh": 1785335302,
+      "stale": false
+    },
+    "fact_player_season": {
+      "last_successful_refresh": 1785335302,
+      "stale": false
+    },
+    "fact_player_week_metrics": {
+      "last_successful_refresh": 1785335302,
+      "stale": false
+    },
+    "fact_player_season_metrics": {
+      "last_successful_refresh": 1785335302,
+      "stale": false
+    },
+    "fact_replacement": {
+      "last_successful_refresh": 1785335302,
+      "stale": false
+    },
+    "_startup_strategy": {
+      "last_successful_refresh": null,
+      "stale": true
+    }
+  }
+}

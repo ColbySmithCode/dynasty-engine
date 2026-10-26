@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.dynasty-engine.refresh-full</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/uv</string><string>run</string><string>python</string>
+    <string>-m</string><string>jobs.refresh</string><string>--mode</string><string>full</string>
+  </array>
+  <key>WorkingDirectory</key><string>/path/to/dynasty-engine</string>
+  <!-- LOCAL wall clock (machine = America/New_York; run asserts this). Weekday: Wed=3, Thu=4.
+       FAST Wed 06:00 ET, FULL Thu 06:00 ET: DIFFERENT DAYS so they never contend for the DuckDB
+       single writer; the exclusive lockfile is the backstop. Both post-MNF (item 3). -->
+  <key>StartCalendarInterval</key>
+  <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>/path/to/dynasty-engine/logs/refresh_full.log</string>
+  <key>StandardErrorPath</key><string>/path/to/dynasty-engine/logs/refresh_full.log</string>
+  <key>RunAtLoad</key><false/>
+</dict>
+</plist>

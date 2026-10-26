@@ -1,0 +1,9 @@
+{
+  "_what": "archetype supervised gap \u2014 full precision, fixed-model OOS (test>=2019).",
+  "capital_auc": 0.9010308552932484,
+  "gap": -0.0002462794215951636,
+  "model_auc": 0.9007845758716533,
+  "n_hits": 43,
+  "n_test": 704,
+  "vintage": "2026-07-29"
+}

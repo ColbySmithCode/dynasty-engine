@@ -1,0 +1,3660 @@
+{
+  "schema_version": 1,
+  "preamble": "INSTRUCTION TO THE ASSISTANT (read first). Every numeric in this bundle carries a {point, ci_lo, ci_hi, uncertainty_status} schema and every claim carries a `must_carry` list of caveats. OMITTING AN ATTACHED CI OR CAVEAT IS AN ERROR, NOT A SUMMARIZATION CHOICE. Specifically: (1) trade questions MUST report BOTH pools (consensus AND corpus) with their CIs — never a single verdict; (2) 'unmeasured' means the sampling variance was never computed — say so, do not present it as certain; (3) startup-strategy questions MUST carry no-strategy-recommended AND the corpus-size bind; (4) archetype/college questions MUST carry 'indistinguishable from capital' / 'uninformative test at these event counts (not a null)', never a yes/no. If the bundle does not support a question, cite the matching `cannot_answer` entry instead of improvising. CAVEAT-RETENTION WAS VERIFIED AGAINST ONE MODEL FAMILY ONLY (Claude Opus 4.8) and self-graded by the authoring session; a different consumer model at draft time is UNTESTED — do not assume another model will retain these caveats.",
+  "provenance": {
+    "nflverse_vintage": "2026-07-29",
+    "nflverse_input_signature": "d9c462197311a92e",
+    "corpus_freeze_date": "2026-07-27",
+    "artifact_baseline_commit": "efe5170"
+  },
+  "freshness": {
+    "summary": "data fresh | 🔒 frozen-by-design (cannot update until its gating condition changes, NOT a failure): _startup_strategy",
+    "fresh": [
+      "fact_adp",
+      "fact_player_season",
+      "fact_player_season_metrics",
+      "fact_player_week",
+      "fact_player_week_metrics",
+      "fact_replacement"
+    ],
+    "stale": [],
+    "frozen_by_design": {
+      "_startup_strategy": "corpus-gated (Gate 6.5): regenerates ONLY on a corpus-signature change; inputs frozen 2026-07-27 (offseason). This is NOT a refresh failure — the backtester cannot update until the SF-startup corpus grows (≤15 effective units in 2021; Phase-7 live pipeline). The no-strategy-edge verdict is therefore a STANDING conclusion, not a pending one."
+    }
+  },
+  "read_scope": {
+    "warehouse_tables_read": [
+      "dim_player",
+      "fact_adp",
+      "fact_player_season",
+      "fact_player_season_metrics",
+      "fact_replacement"
+    ],
+    "export_artifacts_read": [
+      "trade_verdict.json",
+      "startup_strategy.md",
+      "hit_rates_by_slot.md",
+      "archetypes.md",
+      "projections.md",
+      "aging_curves.md"
+    ],
+    "model_artifacts_read": [
+      "cfb_5_4b_perm.json"
+    ]
+  },
+  "uncertainty_legend": {
+    "measured": "a CI is present",
+    "unmeasured": "no CI — sampling variance never computed ('uncertainty not measured')",
+    "exact": "non-estimated value (count / date / id / setting / rank)"
+  },
+  "claims": [
+    {
+      "id": "trade_verdict",
+      "question_scope": "1.11 vs (startup 3rd + startup 4th + 2027 rookie 2nd)",
+      "source_tables": [
+        "fact_player_season",
+        "fact_adp",
+        "fact_replacement"
+      ],
+      "stale": false,
+      "must_carry": [
+        "BOTH pools (consensus AND corpus) with their CIs",
+        "the pick-outcome pool is the highest-leverage assumption; the spread IS the verdict",
+        "the CIs are MC PRECISION BANDS (simulator precision only) — they do NOT propagate aging/survival posteriors, pool choice, or the 0.92× rookie discount"
+      ],
+      "rule": "Standing Constraint #4: lead with BOTH pools + CIs (MC precision bands), NEVER a single verdict.",
+      "pools": {
+        "consensus": {
+          "meaning": "you draft the best-available at every slot (optimal drafter)",
+          "e_delta_vorp": {
+            "point": 10.337131397806298,
+            "ci_lo": 4.865953577847554,
+            "ci_hi": 16.07215611866746,
+            "uncertainty_status": "measured",
+            "kind": "delta",
+            "note": "200-seed MC mean (registry, producer-backed); package wins 200/200 seeds"
+          },
+          "winner": "package",
+          "single_seed_e_delta_082": {
+            "point": 10.8,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "delta",
+            "note": "one seeded draw (trade_verdict.json); corroborates sign only"
+          }
+        },
+        "corpus": {
+          "meaning": "you draft like the median manager (busts included)",
+          "e_delta_vorp": {
+            "point": -77.87029531550294,
+            "ci_lo": -84.48047796921138,
+            "ci_hi": -71.39707944930845,
+            "uncertainty_status": "measured",
+            "kind": "delta",
+            "note": "200-seed MC mean (registry, producer-backed); 1.11 wins 200/200 seeds"
+          },
+          "winner": "1.11",
+          "single_seed_e_delta_082": {
+            "point": -80.0,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "delta",
+            "note": "one seeded draw (trade_verdict.json); corroborates sign only"
+          }
+        }
+      },
+      "headline": "SIGN-REVERSING across pools: consensus E[Δ] +10.3 [+4.9,+16.1] (package wins) vs corpus E[Δ] -77.9 [-84.5,-71.4] (1.11 wins), sign-consistent 200/200 — but these are MC PRECISION BANDS (200-seed simulator precision only; they do NOT propagate aging/survival posteriors, pool choice, or the 0.92× rookie discount). That input-posterior uncertainty is UNPROPAGATED — magnitude UNKNOWN and UNQUEUED. The answer depends decisively on how well you draft; report both pools, never one.",
+      "freshness_state": "fresh"
+    },
+    {
+      "id": "archetypes",
+      "source_tables": [
+        "fact_player_season",
+        "dim_player"
+      ],
+      "stale": false,
+      "must_carry": [
+        "indistinguishable from draft capital (NOT 'beats'/'loses to')",
+        "the CI that pairs with the point is the test-set DeLong CI, which EXCLUDES |gap| > ~0.03 AUC; the refit-over-players CI [−0.084,+0.018] is a different estimand"
+      ],
+      "verdict": "INDISTINGUISHABLE from draft-capital-only (equivalent within ~0.03 AUC)",
+      "gap_auc": {
+        "point": -0.00025,
+        "ci_lo": -0.0303,
+        "ci_hi": 0.0298,
+        "uncertainty_status": "measured",
+        "kind": "auc",
+        "note": "test-set fixed-model estimand (704 players, 43 hits): model AUC 0.9008 vs capital 0.9010, gap −0.00025; DeLong paired SE 0.0153 (AUC corr 0.777, z=−0.02). The 95% CI [−0.0303,+0.0298] EXCLUDES any |gap| > ~0.03 AUC. Do NOT cite the point as a magnitude."
+      },
+      "refit_estimand": {
+        "point": -0.00025,
+        "ci_lo": -0.084,
+        "ci_hi": 0.018,
+        "uncertainty_status": "measured",
+        "kind": "auc",
+        "note": "DIFFERENT estimand (refit-over-players; refits both models per resample → ~1.8× inflated by training instability). NOT the SE of the indistinguishability claim."
+      },
+      "headline": "Archetype clusters are statistically INDISTINGUISHABLE from draft-capital-only on the 2019-2022 test set (704 players, 43 hits): gap −0.00025, DeLong paired SE 0.0153 (corr 0.777, z=−0.02), 95% CI [−0.0303, +0.0298] — which EXCLUDES any true gap larger than ~0.03 AUC in magnitude. The refit-over-players CI [−0.084, +0.018] is a different estimand (training-instability-inflated), not this SE. Whether a gap below ~0.03 matters for a board depends on a decision-relevant AUC threshold; the 0.02–0.03 figure floated in review is an UNSOURCED reviewer-supplied constant pending derivation, so no such claim is made.",
+      "freshness_state": "fresh"
+    },
+    {
+      "id": "college_production_5_4b",
+      "source_tables": [
+        "fact_player_season",
+        "dim_player"
+      ],
+      "source_artifact": "models/cfb_5_4b_perm.json",
+      "stale": false,
+      "must_carry": [
+        "the pre-registered test is UNINFORMATIVE (could not satisfy its own rule at these event counts), NOT a demonstrated null",
+        "report only the pre-registered Westfall-Young p; the dom-shuffle p is a non-pre-registered variant",
+        "the WY family-wise p establishes neither no-effect nor equivalence"
+      ],
+      "verdict": "no signal demonstrated; the pre-registered test was UNINFORMATIVE at these event counts (not a null)",
+      "primary": {
+        "pre_registered_rule": "ceiling-target (top5|fwd3_vorp) tertile lift p<0.05 AND directional in >=2 of 3 non-R1 strata (R2,R3,R4-7), ALL-skill",
+        "rule_met": false,
+        "n_ceiling_strata_significant": {
+          "point": 0,
+          "ci_lo": null,
+          "ci_hi": null,
+          "uncertainty_status": "exact",
+          "kind": "count",
+          "note": "need ≥2 of 3 non-R1 strata (R2,R3,R4-7); got 0 → rule NOT met → draft capital is not improved on. PRE-REGISTERED (PREREG_5_4B) — the primary test."
+        },
+        "pre_registered_min_marginal_p": {
+          "point": 0.1035,
+          "ci_lo": null,
+          "ci_hi": null,
+          "uncertainty_status": "unmeasured",
+          "kind": "pvalue",
+          "note": "perm_diff min (median 0.7431); pre-registered exchangeable set. No CI."
+        },
+        "westfall_young_family_wise_p": {
+          "point": 0.645,
+          "ci_lo": null,
+          "ci_hi": null,
+          "uncertainty_status": "unmeasured",
+          "kind": "pvalue",
+          "note": "THE multiplicity correction FOR the pre-registered test: WY family-wise p computed under perm_diff's OWN exchangeable set (fixed tertiles, middle EXCLUDED), coupled across the 24 tests. Unremarkable ⇒ even the family minimum is what the null predicts. B=20000, seed 1729, vintage 2026-07-29 (offseason). No CI."
+        }
+      },
+      "secondary_different_null": {
+        "_warning": "DIFFERENT exchangeable set (dom-shuffle: whole stratum, middle INCLUDED, tertiles re-derived). This is a robustness check, NOT the multiplicity correction for the pre-registered test. Do NOT read it as confirming the primary — they are different nulls.",
+        "westfall_young_family_wise_p": {
+          "point": 0.4794,
+          "ci_lo": null,
+          "ci_hi": null,
+          "uncertainty_status": "unmeasured",
+          "kind": "pvalue",
+          "note": "dom-shuffle set; also unremarkable — consistent with the uninformative finding, but a non-pre-registered variant, NOT the pre-reg test's correction."
+        },
+        "n_significant": {
+          "point": 0,
+          "ci_lo": null,
+          "ci_hi": null,
+          "uncertainty_status": "exact",
+          "kind": "count",
+          "note": "0/24 marginal p<0.05"
+        },
+        "min_marginal_p": {
+          "point": 0.0543,
+          "ci_lo": null,
+          "ci_hi": null,
+          "uncertainty_status": "unmeasured",
+          "kind": "pvalue",
+          "note": "dom-shuffle min (ALL|R4-7|fwd3_vorp). THRESHOLD-FRAGILE: only 0.0043 above 0.05; the exchangeable-set change alone moved it 0.1035→0.0543, so the count is not a headline."
+        }
+      },
+      "provenance_note": "PRIMARY = the pre-registered perm_diff test (fixed tertiles, outcome-shuffle within top∪bottom, middle EXCLUDED) + its coherent family-wise correction on the SAME set. The dom-shuffle joint null (middle INCLUDED) is a POST-HOC amendment (PHASE8_PLAN §A3) under a DIFFERENT exchangeable set. The two family-wise p's are NOT two views of one test.",
+      "retracted": "An earlier min-selection-artifact interval [retracted] and an independence-based expected-minimum benchmark [withdrawn] MUST NOT be reported.",
+      "headline": "No college-production signal beyond draft capital was DEMONSTRATED, and the pre-registered test COULD NOT have demonstrated one at these event counts — an UNINFORMATIVE test, not a null. Raw top5 (ceiling-target) events per stratum (top-tertile/bottom-tertile): R1 6/6, R2 6/4, R3 2/1, R4-7 3/2 (middle-tertile 5/0/3/0). The pre-registered rule needs a directional tertile lift with perm p<0.05 in ≥2 of 3 non-R1 strata; at ≤6 events/tertile that p<0.05 is unreachable, so 0/3 strata are informative — the 0/3 result means the test could not satisfy its own rule, not that the effect is absent. The pre-registered Westfall-Young family-wise p = 0.645 shows only that the minimum of the 24 marginal p's is unremarkable given their correlation; it does NOT establish no-effect or equivalence (same underpowered counts). Draft-capital-only was not improved on here because the test lacked the events to improve on it. (A non-pre-registered dom-shuffle variant gives family-wise p 0.4794 — reported for transparency, not the pre-registered test.)",
+      "freshness_state": "fresh"
+    },
+    {
+      "id": "startup_strategy",
+      "source_tables": [
+        "_startup_strategy"
+      ],
+      "stale": false,
+      "must_carry": [
+        "no strategy has a validated edge (do NOT recommend one)",
+        "results are opponent-model-dependent (ranking unstable across opponent families)",
+        "corpus size binds every claim (≤15 effective units in 2021)",
+        "this is a STANDING conclusion, not pending — it cannot update until the SF-startup corpus grows (Phase-7 live pipeline)",
+        "the youth-2020 'edge' was a SINGLE-SEED (1729) artifact — UNADJUDICATED-AND-CLOSED, NEVER established; do NOT present it as a real or marginal effect"
+      ],
+      "verdict": "NO startup strategy has a validated edge — none recommended.",
+      "standing_conclusion": "The no-edge verdict is a STANDING conclusion, not a pending one: the backtester is corpus-gated and cannot change until the SF-startup corpus grows beyond the ≤15 effective units of 2021 (Phase-7 live pipeline). Corpus size, not model quality, is the binding constraint.",
+      "operative_corpus_leagues": {
+        "point": 62,
+        "ci_lo": null,
+        "ci_hi": null,
+        "uncertainty_status": "exact",
+        "kind": "count",
+        "note": "SF/12-team/full-PPR/rounds≥15 startups, 2020-2021; 97% TE-premium, 65% pre-NFL-draft, whale-clustered, survivorship-selected"
+      },
+      "operative_corpus_picks": {
+        "point": 20304,
+        "ci_lo": null,
+        "ci_hi": null,
+        "uncertainty_status": "exact",
+        "kind": "count",
+        "note": "NOT the all-format 55,309"
+      },
+      "effective_units_2021": {
+        "point": 15,
+        "ci_lo": null,
+        "ci_hi": null,
+        "uncertainty_status": "exact",
+        "kind": "count",
+        "note": "league count; effective INDEPENDENT units are BELOW this (158 managers in >1 league; one in ~23). This is THE binding constraint on the phase."
+      },
+      "youth_2020_terminal": {
+        "name": "youth-2020",
+        "status": "UNADJUDICATED-AND-CLOSED (corpus-limited)",
+        "verdict": "The apparent youth-2020 edge was a SINGLE-SEED (1729) ARTIFACT — NEVER established. Do NOT present it as a real, marginal, or validated effect.",
+        "why": "The published lower bound that excluded 0 was seed-specific. Recomputed league-clustered across 5 seeds, the Δ_bal lower bound L₀ straddles zero (B=160 mean −0.0146, all 5 seeds negative). Closure is corpus-limited (only more corpus moves the converged L₀ off 0), not compute-limited; reopens ONLY if the SF-startup corpus grows. Authority: Colby NOTE 0038, G10.7v COND-A.",
+        "historical_single_seed_values": {
+          "point": 0.152,
+          "ci_lo": 0.001,
+          "ci_hi": 0.281,
+          "uncertainty_status": "measured",
+          "kind": "winrate",
+          "note": "PRESERVED seed-1729 record ONLY, NOT a live claim: full-sample Δ_bal +0.152, single-seed percentile CI [+0.001,+0.281], clustered Δ_bal +0.116, permutation p<0.001 — all seed-1729-specific; the edge is CLOSED."
+        }
+      },
+      "opponent_dependence": "Strategy RANKING is NOT stable across opponent families (reach-window vs empirical draw) — the answer is opponent-model-dependent, a first-order caveat.",
+      "headline": "NO startup strategy has a validated edge. The one APPARENT in-sample effect (youth-2020) was a single-seed (1729) artifact — UNADJUDICATED-AND-CLOSED, never established (its lower bound straddles 0 across seeds). Corpus size — not model quality — is the binding constraint.",
+      "freshness_state": "frozen_by_design",
+      "frozen_reason": "corpus-gated (Gate 6.5): regenerates ONLY on a corpus-signature change; inputs frozen 2026-07-27 (offseason). This is NOT a refresh failure — the backtester cannot update until the SF-startup corpus grows (≤15 effective units in 2021; Phase-7 live pipeline). The no-strategy-edge verdict is therefore a STANDING conclusion, not a pending one."
+    },
+    {
+      "id": "hit_rates_clock_a",
+      "source_tables": [
+        "fact_player_season",
+        "dim_player"
+      ],
+      "stale": false,
+      "must_carry": [
+        "every rate WITH its Wilson 95% CI + n — never the bare rate"
+      ],
+      "meaning": "P(relevant in year N since draft), Wilson 95% CI. Use for pick valuation.",
+      "rows": {
+        "QB·R1": {
+          "y1": {
+            "point": 0.66,
+            "ci_lo": 0.52,
+            "ci_hi": 0.78,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 50
+          },
+          "y2": {
+            "point": 0.73,
+            "ci_lo": 0.59,
+            "ci_hi": 0.83,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 48
+          },
+          "y3": {
+            "point": 0.59,
+            "ci_lo": 0.45,
+            "ci_hi": 0.73,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 42
+          },
+          "y4": {
+            "point": 0.54,
+            "ci_lo": 0.39,
+            "ci_hi": 0.68,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 39
+          },
+          "y5": {
+            "point": 0.47,
+            "ci_lo": 0.33,
+            "ci_hi": 0.63,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 38
+          },
+          "y6": {
+            "point": 0.42,
+            "ci_lo": 0.27,
+            "ci_hi": 0.59,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 33
+          },
+          "y7": {
+            "point": 0.45,
+            "ci_lo": 0.28,
+            "ci_hi": 0.62,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 29
+          },
+          "y8": {
+            "point": 0.39,
+            "ci_lo": 0.22,
+            "ci_hi": 0.57,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 26
+          }
+        },
+        "QB·R3": {
+          "y1": {
+            "point": 0.19,
+            "ci_lo": 0.08,
+            "ci_hi": 0.4,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 21
+          },
+          "y2": {
+            "point": 0.32,
+            "ci_lo": 0.15,
+            "ci_hi": 0.54,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 19
+          },
+          "y3": {
+            "point": 0.1,
+            "ci_lo": 0.03,
+            "ci_hi": 0.31,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 19
+          },
+          "y4": {
+            "point": 0.11,
+            "ci_lo": 0.03,
+            "ci_hi": 0.33,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 18
+          },
+          "y5": {
+            "point": 0.07,
+            "ci_lo": 0.01,
+            "ci_hi": 0.3,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 15
+          }
+        },
+        "QB·R4-7": {
+          "y1": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.1,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 95
+          },
+          "y2": {
+            "point": 0.08,
+            "ci_lo": 0.04,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 87
+          },
+          "y3": {
+            "point": 0.05,
+            "ci_lo": 0.02,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 82
+          },
+          "y4": {
+            "point": 0.04,
+            "ci_lo": 0.01,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 73
+          },
+          "y5": {
+            "point": 0.04,
+            "ci_lo": 0.01,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 68
+          },
+          "y6": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 66
+          },
+          "y7": {
+            "point": 0.07,
+            "ci_lo": 0.03,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 59
+          },
+          "y8": {
+            "point": 0.04,
+            "ci_lo": 0.01,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 53
+          }
+        },
+        "QB·UDFA": {
+          "y1": {
+            "point": 0.0,
+            "ci_lo": 0.0,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 86
+          },
+          "y2": {
+            "point": 0.04,
+            "ci_lo": 0.01,
+            "ci_hi": 0.1,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 81
+          },
+          "y3": {
+            "point": 0.0,
+            "ci_lo": 0.0,
+            "ci_hi": 0.05,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 73
+          },
+          "y4": {
+            "point": 0.0,
+            "ci_lo": 0.0,
+            "ci_hi": 0.06,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 66
+          },
+          "y5": {
+            "point": 0.02,
+            "ci_lo": 0.0,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 57
+          },
+          "y6": {
+            "point": 0.02,
+            "ci_lo": 0.0,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 56
+          },
+          "y7": {
+            "point": 0.04,
+            "ci_lo": 0.01,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 50
+          },
+          "y8": {
+            "point": 0.02,
+            "ci_lo": 0.0,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 41
+          }
+        },
+        "RB·R1": {
+          "y1": {
+            "point": 0.83,
+            "ci_lo": 0.64,
+            "ci_hi": 0.93,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 24
+          },
+          "y2": {
+            "point": 0.73,
+            "ci_lo": 0.52,
+            "ci_hi": 0.87,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 22
+          },
+          "y3": {
+            "point": 0.64,
+            "ci_lo": 0.43,
+            "ci_hi": 0.8,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 22
+          },
+          "y4": {
+            "point": 0.65,
+            "ci_lo": 0.43,
+            "ci_hi": 0.82,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 20
+          },
+          "y5": {
+            "point": 0.5,
+            "ci_lo": 0.3,
+            "ci_hi": 0.7,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 20
+          },
+          "y6": {
+            "point": 0.5,
+            "ci_lo": 0.29,
+            "ci_hi": 0.71,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 18
+          },
+          "y7": {
+            "point": 0.41,
+            "ci_lo": 0.22,
+            "ci_hi": 0.64,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 17
+          },
+          "y8": {
+            "point": 0.25,
+            "ci_lo": 0.1,
+            "ci_hi": 0.49,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 16
+          }
+        },
+        "RB·R2": {
+          "y1": {
+            "point": 0.45,
+            "ci_lo": 0.31,
+            "ci_hi": 0.6,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 42
+          },
+          "y2": {
+            "point": 0.61,
+            "ci_lo": 0.46,
+            "ci_hi": 0.75,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 39
+          },
+          "y3": {
+            "point": 0.6,
+            "ci_lo": 0.45,
+            "ci_hi": 0.74,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 38
+          },
+          "y4": {
+            "point": 0.51,
+            "ci_lo": 0.36,
+            "ci_hi": 0.67,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 37
+          },
+          "y5": {
+            "point": 0.32,
+            "ci_lo": 0.19,
+            "ci_hi": 0.49,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 34
+          },
+          "y6": {
+            "point": 0.3,
+            "ci_lo": 0.17,
+            "ci_hi": 0.47,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 33
+          },
+          "y7": {
+            "point": 0.18,
+            "ci_lo": 0.08,
+            "ci_hi": 0.36,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 28
+          },
+          "y8": {
+            "point": 0.11,
+            "ci_lo": 0.04,
+            "ci_hi": 0.28,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 27
+          }
+        },
+        "RB·R3": {
+          "y1": {
+            "point": 0.39,
+            "ci_lo": 0.26,
+            "ci_hi": 0.53,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 44
+          },
+          "y2": {
+            "point": 0.54,
+            "ci_lo": 0.39,
+            "ci_hi": 0.68,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 43
+          },
+          "y3": {
+            "point": 0.55,
+            "ci_lo": 0.4,
+            "ci_hi": 0.69,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 40
+          },
+          "y4": {
+            "point": 0.47,
+            "ci_lo": 0.32,
+            "ci_hi": 0.63,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 36
+          },
+          "y5": {
+            "point": 0.39,
+            "ci_lo": 0.25,
+            "ci_hi": 0.56,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 33
+          },
+          "y6": {
+            "point": 0.31,
+            "ci_lo": 0.18,
+            "ci_hi": 0.49,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 32
+          },
+          "y7": {
+            "point": 0.29,
+            "ci_lo": 0.15,
+            "ci_hi": 0.47,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 28
+          },
+          "y8": {
+            "point": 0.13,
+            "ci_lo": 0.04,
+            "ci_hi": 0.32,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 23
+          }
+        },
+        "RB·R4-7": {
+          "y1": {
+            "point": 0.13,
+            "ci_lo": 0.1,
+            "ci_hi": 0.18,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 246
+          },
+          "y2": {
+            "point": 0.15,
+            "ci_lo": 0.11,
+            "ci_hi": 0.2,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 226
+          },
+          "y3": {
+            "point": 0.15,
+            "ci_lo": 0.11,
+            "ci_hi": 0.21,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 210
+          },
+          "y4": {
+            "point": 0.11,
+            "ci_lo": 0.07,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 197
+          },
+          "y5": {
+            "point": 0.08,
+            "ci_lo": 0.05,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 180
+          },
+          "y6": {
+            "point": 0.12,
+            "ci_lo": 0.08,
+            "ci_hi": 0.17,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 163
+          },
+          "y7": {
+            "point": 0.06,
+            "ci_lo": 0.04,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 156
+          },
+          "y8": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.08,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 138
+          }
+        },
+        "RB·UDFA": {
+          "y1": {
+            "point": 0.03,
+            "ci_lo": 0.02,
+            "ci_hi": 0.06,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 346
+          },
+          "y2": {
+            "point": 0.04,
+            "ci_lo": 0.03,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 334
+          },
+          "y3": {
+            "point": 0.04,
+            "ci_lo": 0.03,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 310
+          },
+          "y4": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 286
+          },
+          "y5": {
+            "point": 0.05,
+            "ci_lo": 0.03,
+            "ci_hi": 0.08,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 263
+          },
+          "y6": {
+            "point": 0.04,
+            "ci_lo": 0.03,
+            "ci_hi": 0.08,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 248
+          },
+          "y7": {
+            "point": 0.01,
+            "ci_lo": 0.01,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 221
+          },
+          "y8": {
+            "point": 0.01,
+            "ci_lo": 0.0,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 192
+          }
+        },
+        "TE·R1": {
+          "y1": {
+            "point": 0.47,
+            "ci_lo": 0.26,
+            "ci_hi": 0.69,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 17
+          },
+          "y2": {
+            "point": 0.67,
+            "ci_lo": 0.42,
+            "ci_hi": 0.85,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 15
+          }
+        },
+        "TE·R2": {
+          "y1": {
+            "point": 0.15,
+            "ci_lo": 0.07,
+            "ci_hi": 0.31,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 33
+          },
+          "y2": {
+            "point": 0.37,
+            "ci_lo": 0.22,
+            "ci_hi": 0.55,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 30
+          },
+          "y3": {
+            "point": 0.41,
+            "ci_lo": 0.26,
+            "ci_hi": 0.59,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 29
+          },
+          "y4": {
+            "point": 0.42,
+            "ci_lo": 0.24,
+            "ci_hi": 0.61,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 24
+          },
+          "y5": {
+            "point": 0.22,
+            "ci_lo": 0.1,
+            "ci_hi": 0.42,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 23
+          },
+          "y6": {
+            "point": 0.32,
+            "ci_lo": 0.16,
+            "ci_hi": 0.53,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 22
+          },
+          "y7": {
+            "point": 0.24,
+            "ci_lo": 0.11,
+            "ci_hi": 0.45,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 21
+          },
+          "y8": {
+            "point": 0.22,
+            "ci_lo": 0.09,
+            "ci_hi": 0.45,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 18
+          }
+        },
+        "TE·R3": {
+          "y1": {
+            "point": 0.1,
+            "ci_lo": 0.04,
+            "ci_hi": 0.24,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 38
+          },
+          "y2": {
+            "point": 0.19,
+            "ci_lo": 0.1,
+            "ci_hi": 0.34,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 37
+          },
+          "y3": {
+            "point": 0.25,
+            "ci_lo": 0.14,
+            "ci_hi": 0.41,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 36
+          },
+          "y4": {
+            "point": 0.21,
+            "ci_lo": 0.11,
+            "ci_hi": 0.38,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 33
+          },
+          "y5": {
+            "point": 0.2,
+            "ci_lo": 0.1,
+            "ci_hi": 0.37,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 30
+          },
+          "y6": {
+            "point": 0.15,
+            "ci_lo": 0.06,
+            "ci_hi": 0.33,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 27
+          },
+          "y7": {
+            "point": 0.13,
+            "ci_lo": 0.04,
+            "ci_hi": 0.32,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 23
+          },
+          "y8": {
+            "point": 0.16,
+            "ci_lo": 0.06,
+            "ci_hi": 0.38,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 19
+          }
+        },
+        "TE·R4-7": {
+          "y1": {
+            "point": 0.01,
+            "ci_lo": 0.0,
+            "ci_hi": 0.05,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 152
+          },
+          "y2": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 143
+          },
+          "y3": {
+            "point": 0.06,
+            "ci_lo": 0.03,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 134
+          },
+          "y4": {
+            "point": 0.06,
+            "ci_lo": 0.03,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 127
+          },
+          "y5": {
+            "point": 0.05,
+            "ci_lo": 0.03,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 112
+          },
+          "y6": {
+            "point": 0.07,
+            "ci_lo": 0.03,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 106
+          },
+          "y7": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 99
+          },
+          "y8": {
+            "point": 0.03,
+            "ci_lo": 0.01,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 91
+          }
+        },
+        "TE·UDFA": {
+          "y1": {
+            "point": 0.0,
+            "ci_lo": 0.0,
+            "ci_hi": 0.02,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 248
+          },
+          "y2": {
+            "point": 0.0,
+            "ci_lo": 0.0,
+            "ci_hi": 0.02,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 236
+          },
+          "y3": {
+            "point": 0.02,
+            "ci_lo": 0.01,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 224
+          },
+          "y4": {
+            "point": 0.02,
+            "ci_lo": 0.01,
+            "ci_hi": 0.05,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 214
+          },
+          "y5": {
+            "point": 0.01,
+            "ci_lo": 0.01,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 201
+          },
+          "y6": {
+            "point": 0.01,
+            "ci_lo": 0.0,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 186
+          },
+          "y7": {
+            "point": 0.01,
+            "ci_lo": 0.0,
+            "ci_hi": 0.03,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 167
+          },
+          "y8": {
+            "point": 0.01,
+            "ci_lo": 0.0,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 149
+          }
+        },
+        "WR·R1": {
+          "y1": {
+            "point": 0.67,
+            "ci_lo": 0.54,
+            "ci_hi": 0.77,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 63
+          },
+          "y2": {
+            "point": 0.66,
+            "ci_lo": 0.53,
+            "ci_hi": 0.77,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 59
+          },
+          "y3": {
+            "point": 0.65,
+            "ci_lo": 0.52,
+            "ci_hi": 0.77,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 52
+          },
+          "y4": {
+            "point": 0.6,
+            "ci_lo": 0.46,
+            "ci_hi": 0.73,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 48
+          },
+          "y5": {
+            "point": 0.57,
+            "ci_lo": 0.42,
+            "ci_hi": 0.71,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 42
+          },
+          "y6": {
+            "point": 0.54,
+            "ci_lo": 0.38,
+            "ci_hi": 0.69,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 37
+          },
+          "y7": {
+            "point": 0.39,
+            "ci_lo": 0.24,
+            "ci_hi": 0.56,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 31
+          },
+          "y8": {
+            "point": 0.37,
+            "ci_lo": 0.22,
+            "ci_hi": 0.55,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 30
+          }
+        },
+        "WR·R2": {
+          "y1": {
+            "point": 0.42,
+            "ci_lo": 0.32,
+            "ci_hi": 0.54,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 71
+          },
+          "y2": {
+            "point": 0.51,
+            "ci_lo": 0.39,
+            "ci_hi": 0.62,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 67
+          },
+          "y3": {
+            "point": 0.44,
+            "ci_lo": 0.33,
+            "ci_hi": 0.57,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 63
+          },
+          "y4": {
+            "point": 0.47,
+            "ci_lo": 0.35,
+            "ci_hi": 0.6,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 59
+          },
+          "y5": {
+            "point": 0.35,
+            "ci_lo": 0.23,
+            "ci_hi": 0.48,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 52
+          },
+          "y6": {
+            "point": 0.4,
+            "ci_lo": 0.27,
+            "ci_hi": 0.54,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 48
+          },
+          "y7": {
+            "point": 0.39,
+            "ci_lo": 0.26,
+            "ci_hi": 0.54,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 41
+          },
+          "y8": {
+            "point": 0.26,
+            "ci_lo": 0.14,
+            "ci_hi": 0.42,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 35
+          }
+        },
+        "WR·R3": {
+          "y1": {
+            "point": 0.2,
+            "ci_lo": 0.12,
+            "ci_hi": 0.3,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 75
+          },
+          "y2": {
+            "point": 0.29,
+            "ci_lo": 0.2,
+            "ci_hi": 0.41,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 69
+          },
+          "y3": {
+            "point": 0.39,
+            "ci_lo": 0.28,
+            "ci_hi": 0.51,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 64
+          },
+          "y4": {
+            "point": 0.21,
+            "ci_lo": 0.12,
+            "ci_hi": 0.33,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 58
+          },
+          "y5": {
+            "point": 0.33,
+            "ci_lo": 0.22,
+            "ci_hi": 0.47,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 54
+          },
+          "y6": {
+            "point": 0.24,
+            "ci_lo": 0.15,
+            "ci_hi": 0.38,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 49
+          },
+          "y7": {
+            "point": 0.22,
+            "ci_lo": 0.12,
+            "ci_hi": 0.36,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 46
+          },
+          "y8": {
+            "point": 0.17,
+            "ci_lo": 0.08,
+            "ci_hi": 0.31,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 42
+          }
+        },
+        "WR·R4-7": {
+          "y1": {
+            "point": 0.08,
+            "ci_lo": 0.05,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 279
+          },
+          "y2": {
+            "point": 0.11,
+            "ci_lo": 0.07,
+            "ci_hi": 0.15,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 262
+          },
+          "y3": {
+            "point": 0.11,
+            "ci_lo": 0.07,
+            "ci_hi": 0.15,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 243
+          },
+          "y4": {
+            "point": 0.09,
+            "ci_lo": 0.06,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 225
+          },
+          "y5": {
+            "point": 0.09,
+            "ci_lo": 0.06,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 214
+          },
+          "y6": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 194
+          },
+          "y7": {
+            "point": 0.06,
+            "ci_lo": 0.03,
+            "ci_hi": 0.1,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 174
+          },
+          "y8": {
+            "point": 0.03,
+            "ci_lo": 0.01,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 159
+          }
+        },
+        "WR·UDFA": {
+          "y1": {
+            "point": 0.02,
+            "ci_lo": 0.01,
+            "ci_hi": 0.03,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 535
+          },
+          "y2": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.06,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 502
+          },
+          "y3": {
+            "point": 0.03,
+            "ci_lo": 0.02,
+            "ci_hi": 0.05,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 477
+          },
+          "y4": {
+            "point": 0.05,
+            "ci_lo": 0.03,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 441
+          },
+          "y5": {
+            "point": 0.03,
+            "ci_lo": 0.02,
+            "ci_hi": 0.05,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 403
+          },
+          "y6": {
+            "point": 0.02,
+            "ci_lo": 0.01,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 382
+          },
+          "y7": {
+            "point": 0.02,
+            "ci_lo": 0.01,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 352
+          },
+          "y8": {
+            "point": 0.01,
+            "ci_lo": 0.0,
+            "ci_hi": 0.03,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 294
+          }
+        },
+        "QB·22": {
+          "y1": {
+            "point": 0.29,
+            "ci_lo": 0.18,
+            "ci_hi": 0.43,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 48
+          },
+          "y2": {
+            "point": 0.47,
+            "ci_lo": 0.33,
+            "ci_hi": 0.61,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 45
+          },
+          "y3": {
+            "point": 0.36,
+            "ci_lo": 0.24,
+            "ci_hi": 0.51,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 44
+          },
+          "y4": {
+            "point": 0.34,
+            "ci_lo": 0.22,
+            "ci_hi": 0.49,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 41
+          },
+          "y5": {
+            "point": 0.35,
+            "ci_lo": 0.22,
+            "ci_hi": 0.51,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 40
+          },
+          "y6": {
+            "point": 0.31,
+            "ci_lo": 0.18,
+            "ci_hi": 0.47,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 36
+          },
+          "y7": {
+            "point": 0.3,
+            "ci_lo": 0.17,
+            "ci_hi": 0.48,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 30
+          },
+          "y8": {
+            "point": 0.27,
+            "ci_lo": 0.14,
+            "ci_hi": 0.46,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 26
+          }
+        },
+        "QB·23": {
+          "y1": {
+            "point": 0.16,
+            "ci_lo": 0.1,
+            "ci_hi": 0.25,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 98
+          },
+          "y2": {
+            "point": 0.17,
+            "ci_lo": 0.11,
+            "ci_hi": 0.26,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 93
+          },
+          "y3": {
+            "point": 0.11,
+            "ci_lo": 0.06,
+            "ci_hi": 0.19,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 90
+          },
+          "y4": {
+            "point": 0.07,
+            "ci_lo": 0.03,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 87
+          },
+          "y5": {
+            "point": 0.06,
+            "ci_lo": 0.03,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 79
+          },
+          "y6": {
+            "point": 0.07,
+            "ci_lo": 0.03,
+            "ci_hi": 0.15,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 73
+          },
+          "y7": {
+            "point": 0.09,
+            "ci_lo": 0.04,
+            "ci_hi": 0.18,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 67
+          },
+          "y8": {
+            "point": 0.07,
+            "ci_lo": 0.03,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 59
+          }
+        },
+        "QB·≥24": {
+          "y1": {
+            "point": 0.13,
+            "ci_lo": 0.08,
+            "ci_hi": 0.2,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 111
+          },
+          "y2": {
+            "point": 0.14,
+            "ci_lo": 0.08,
+            "ci_hi": 0.22,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 101
+          },
+          "y3": {
+            "point": 0.08,
+            "ci_lo": 0.04,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 87
+          },
+          "y4": {
+            "point": 0.11,
+            "ci_lo": 0.06,
+            "ci_hi": 0.2,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 73
+          },
+          "y5": {
+            "point": 0.11,
+            "ci_lo": 0.05,
+            "ci_hi": 0.21,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 64
+          },
+          "y6": {
+            "point": 0.11,
+            "ci_lo": 0.05,
+            "ci_hi": 0.21,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 64
+          },
+          "y7": {
+            "point": 0.1,
+            "ci_lo": 0.05,
+            "ci_hi": 0.21,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 58
+          },
+          "y8": {
+            "point": 0.08,
+            "ci_lo": 0.03,
+            "ci_hi": 0.19,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 50
+          }
+        },
+        "RB·22": {
+          "y1": {
+            "point": 0.2,
+            "ci_lo": 0.16,
+            "ci_hi": 0.26,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 215
+          },
+          "y2": {
+            "point": 0.25,
+            "ci_lo": 0.2,
+            "ci_hi": 0.31,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 205
+          },
+          "y3": {
+            "point": 0.26,
+            "ci_lo": 0.2,
+            "ci_hi": 0.32,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 195
+          },
+          "y4": {
+            "point": 0.22,
+            "ci_lo": 0.17,
+            "ci_hi": 0.29,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 184
+          },
+          "y5": {
+            "point": 0.18,
+            "ci_lo": 0.13,
+            "ci_hi": 0.24,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 169
+          },
+          "y6": {
+            "point": 0.18,
+            "ci_lo": 0.13,
+            "ci_hi": 0.25,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 156
+          },
+          "y7": {
+            "point": 0.11,
+            "ci_lo": 0.07,
+            "ci_hi": 0.17,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 140
+          },
+          "y8": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 122
+          }
+        },
+        "RB·23": {
+          "y1": {
+            "point": 0.09,
+            "ci_lo": 0.06,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 250
+          },
+          "y2": {
+            "point": 0.12,
+            "ci_lo": 0.08,
+            "ci_hi": 0.17,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 237
+          },
+          "y3": {
+            "point": 0.12,
+            "ci_lo": 0.08,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 226
+          },
+          "y4": {
+            "point": 0.1,
+            "ci_lo": 0.07,
+            "ci_hi": 0.15,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 215
+          },
+          "y5": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 200
+          },
+          "y6": {
+            "point": 0.05,
+            "ci_lo": 0.03,
+            "ci_hi": 0.1,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 187
+          },
+          "y7": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.08,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 171
+          },
+          "y8": {
+            "point": 0.03,
+            "ci_lo": 0.01,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 151
+          }
+        },
+        "RB·≤21": {
+          "y1": {
+            "point": 0.3,
+            "ci_lo": 0.2,
+            "ci_hi": 0.42,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 64
+          },
+          "y2": {
+            "point": 0.37,
+            "ci_lo": 0.26,
+            "ci_hi": 0.5,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 57
+          },
+          "y3": {
+            "point": 0.4,
+            "ci_lo": 0.28,
+            "ci_hi": 0.53,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 53
+          },
+          "y4": {
+            "point": 0.27,
+            "ci_lo": 0.17,
+            "ci_hi": 0.41,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 48
+          },
+          "y5": {
+            "point": 0.29,
+            "ci_lo": 0.18,
+            "ci_hi": 0.43,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 45
+          },
+          "y6": {
+            "point": 0.31,
+            "ci_lo": 0.19,
+            "ci_hi": 0.46,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 42
+          },
+          "y7": {
+            "point": 0.25,
+            "ci_lo": 0.14,
+            "ci_hi": 0.41,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 36
+          },
+          "y8": {
+            "point": 0.12,
+            "ci_lo": 0.05,
+            "ci_hi": 0.28,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 32
+          }
+        },
+        "RB·≥24": {
+          "y1": {
+            "point": 0.09,
+            "ci_lo": 0.05,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 173
+          },
+          "y2": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 165
+          },
+          "y3": {
+            "point": 0.05,
+            "ci_lo": 0.02,
+            "ci_hi": 0.1,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 146
+          },
+          "y4": {
+            "point": 0.05,
+            "ci_lo": 0.02,
+            "ci_hi": 0.1,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 129
+          },
+          "y5": {
+            "point": 0.03,
+            "ci_lo": 0.01,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 116
+          },
+          "y6": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 109
+          },
+          "y7": {
+            "point": 0.02,
+            "ci_lo": 0.01,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 103
+          },
+          "y8": {
+            "point": 0.0,
+            "ci_lo": 0.0,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 91
+          }
+        },
+        "TE·22": {
+          "y1": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 107
+          },
+          "y2": {
+            "point": 0.1,
+            "ci_lo": 0.06,
+            "ci_hi": 0.17,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 101
+          },
+          "y3": {
+            "point": 0.11,
+            "ci_lo": 0.06,
+            "ci_hi": 0.19,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 98
+          },
+          "y4": {
+            "point": 0.09,
+            "ci_lo": 0.04,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 94
+          },
+          "y5": {
+            "point": 0.08,
+            "ci_lo": 0.04,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 86
+          },
+          "y6": {
+            "point": 0.06,
+            "ci_lo": 0.03,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 83
+          },
+          "y7": {
+            "point": 0.04,
+            "ci_lo": 0.01,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 78
+          },
+          "y8": {
+            "point": 0.06,
+            "ci_lo": 0.02,
+            "ci_hi": 0.15,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 65
+          }
+        },
+        "TE·23": {
+          "y1": {
+            "point": 0.03,
+            "ci_lo": 0.01,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 196
+          },
+          "y2": {
+            "point": 0.09,
+            "ci_lo": 0.05,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 189
+          },
+          "y3": {
+            "point": 0.09,
+            "ci_lo": 0.06,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 186
+          },
+          "y4": {
+            "point": 0.11,
+            "ci_lo": 0.07,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 177
+          },
+          "y5": {
+            "point": 0.05,
+            "ci_lo": 0.03,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 166
+          },
+          "y6": {
+            "point": 0.06,
+            "ci_lo": 0.04,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 157
+          },
+          "y7": {
+            "point": 0.06,
+            "ci_lo": 0.03,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 143
+          },
+          "y8": {
+            "point": 0.02,
+            "ci_lo": 0.01,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 132
+          }
+        },
+        "TE·≤21": {
+          "y1": {
+            "point": 0.21,
+            "ci_lo": 0.09,
+            "ci_hi": 0.43,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 19
+          },
+          "y2": {
+            "point": 0.25,
+            "ci_lo": 0.1,
+            "ci_hi": 0.49,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 16
+          },
+          "y3": {
+            "point": 0.33,
+            "ci_lo": 0.15,
+            "ci_hi": 0.58,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 15
+          },
+          "y4": {
+            "point": 0.2,
+            "ci_lo": 0.07,
+            "ci_hi": 0.45,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 15
+          },
+          "y5": {
+            "point": 0.2,
+            "ci_lo": 0.07,
+            "ci_hi": 0.45,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 15
+          }
+        },
+        "TE·≥24": {
+          "y1": {
+            "point": 0.01,
+            "ci_lo": 0.0,
+            "ci_hi": 0.04,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 166
+          },
+          "y2": {
+            "point": 0.03,
+            "ci_lo": 0.01,
+            "ci_hi": 0.06,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 155
+          },
+          "y3": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 138
+          },
+          "y4": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 125
+          },
+          "y5": {
+            "point": 0.06,
+            "ci_lo": 0.03,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 112
+          },
+          "y6": {
+            "point": 0.05,
+            "ci_lo": 0.02,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 101
+          },
+          "y7": {
+            "point": 0.05,
+            "ci_lo": 0.02,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 92
+          },
+          "y8": {
+            "point": 0.05,
+            "ci_lo": 0.02,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 81
+          }
+        },
+        "WR·22": {
+          "y1": {
+            "point": 0.15,
+            "ci_lo": 0.11,
+            "ci_hi": 0.2,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 284
+          },
+          "y2": {
+            "point": 0.18,
+            "ci_lo": 0.14,
+            "ci_hi": 0.23,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 273
+          },
+          "y3": {
+            "point": 0.18,
+            "ci_lo": 0.14,
+            "ci_hi": 0.23,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 263
+          },
+          "y4": {
+            "point": 0.15,
+            "ci_lo": 0.11,
+            "ci_hi": 0.2,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 248
+          },
+          "y5": {
+            "point": 0.14,
+            "ci_lo": 0.1,
+            "ci_hi": 0.19,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 233
+          },
+          "y6": {
+            "point": 0.12,
+            "ci_lo": 0.08,
+            "ci_hi": 0.17,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 217
+          },
+          "y7": {
+            "point": 0.11,
+            "ci_lo": 0.07,
+            "ci_hi": 0.16,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 196
+          },
+          "y8": {
+            "point": 0.08,
+            "ci_lo": 0.05,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 167
+          }
+        },
+        "WR·23": {
+          "y1": {
+            "point": 0.09,
+            "ci_lo": 0.06,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 398
+          },
+          "y2": {
+            "point": 0.1,
+            "ci_lo": 0.07,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 372
+          },
+          "y3": {
+            "point": 0.11,
+            "ci_lo": 0.08,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 351
+          },
+          "y4": {
+            "point": 0.1,
+            "ci_lo": 0.07,
+            "ci_hi": 0.14,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 330
+          },
+          "y5": {
+            "point": 0.11,
+            "ci_lo": 0.08,
+            "ci_hi": 0.15,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 308
+          },
+          "y6": {
+            "point": 0.07,
+            "ci_lo": 0.05,
+            "ci_hi": 0.11,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 291
+          },
+          "y7": {
+            "point": 0.05,
+            "ci_lo": 0.03,
+            "ci_hi": 0.08,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 263
+          },
+          "y8": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.08,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 233
+          }
+        },
+        "WR·≤21": {
+          "y1": {
+            "point": 0.36,
+            "ci_lo": 0.25,
+            "ci_hi": 0.48,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 67
+          },
+          "y2": {
+            "point": 0.5,
+            "ci_lo": 0.38,
+            "ci_hi": 0.62,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 66
+          },
+          "y3": {
+            "point": 0.52,
+            "ci_lo": 0.39,
+            "ci_hi": 0.64,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 62
+          },
+          "y4": {
+            "point": 0.42,
+            "ci_lo": 0.3,
+            "ci_hi": 0.55,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 57
+          },
+          "y5": {
+            "point": 0.35,
+            "ci_lo": 0.23,
+            "ci_hi": 0.48,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 52
+          },
+          "y6": {
+            "point": 0.38,
+            "ci_lo": 0.26,
+            "ci_hi": 0.53,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 47
+          },
+          "y7": {
+            "point": 0.37,
+            "ci_lo": 0.23,
+            "ci_hi": 0.53,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 38
+          },
+          "y8": {
+            "point": 0.26,
+            "ci_lo": 0.14,
+            "ci_hi": 0.42,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 35
+          }
+        },
+        "WR·≥24": {
+          "y1": {
+            "point": 0.06,
+            "ci_lo": 0.04,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 274
+          },
+          "y2": {
+            "point": 0.09,
+            "ci_lo": 0.06,
+            "ci_hi": 0.13,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 248
+          },
+          "y3": {
+            "point": 0.05,
+            "ci_lo": 0.03,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 223
+          },
+          "y4": {
+            "point": 0.07,
+            "ci_lo": 0.04,
+            "ci_hi": 0.12,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 196
+          },
+          "y5": {
+            "point": 0.05,
+            "ci_lo": 0.03,
+            "ci_hi": 0.1,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 172
+          },
+          "y6": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 155
+          },
+          "y7": {
+            "point": 0.04,
+            "ci_lo": 0.02,
+            "ci_hi": 0.09,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 147
+          },
+          "y8": {
+            "point": 0.02,
+            "ci_lo": 0.01,
+            "ci_hi": 0.07,
+            "uncertainty_status": "measured",
+            "kind": "rate",
+            "n": 125
+          }
+        }
+      },
+      "freshness_state": "fresh"
+    },
+    {
+      "id": "projections_established",
+      "source_tables": [
+        "fact_player_season"
+      ],
+      "stale": false,
+      "must_carry": [
+        "every projection is a distribution (90% CI), never a point",
+        "projection loses to last-year-PPG under matched information sets (dAUC -0.0224, CI [-0.0365, -0.0085])"
+      ],
+      "meaning": "Bayesian posterior PPG (mean [5-95%]) by future year; QB intervals wider (Decision 6).",
+      "players": [
+        {
+          "player": "Christian McCaffrey",
+          "pos": "RB",
+          "age": {
+            "point": 30,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 17.1,
+            "ci_lo": 15.0,
+            "ci_hi": 19.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 15.3,
+            "ci_lo": 13.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 14.0,
+            "ci_lo": 10.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Puka Nacua",
+          "pos": "WR",
+          "age": {
+            "point": 25,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 18.0,
+            "ci_lo": 16.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 17.9,
+            "ci_lo": 16.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 17.3,
+            "ci_lo": 15.0,
+            "ci_hi": 19.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Josh Allen",
+          "pos": "QB",
+          "age": {
+            "point": 30,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 19.8,
+            "ci_lo": 17.0,
+            "ci_hi": 22.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 19.3,
+            "ci_lo": 17.0,
+            "ci_hi": 22.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 20.5,
+            "ci_lo": 16.0,
+            "ci_hi": 25.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Bijan Robinson",
+          "pos": "RB",
+          "age": {
+            "point": 24,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 16.4,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 15.7,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 15.8,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Jahmyr Gibbs",
+          "pos": "RB",
+          "age": {
+            "point": 24,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 16.2,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 15.6,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 15.6,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Jonathan Taylor",
+          "pos": "RB",
+          "age": {
+            "point": 27,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 15.2,
+            "ci_lo": 13.0,
+            "ci_hi": 17.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 14.4,
+            "ci_lo": 12.0,
+            "ci_hi": 16.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 14.4,
+            "ci_lo": 12.0,
+            "ci_hi": 17.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Matthew Stafford",
+          "pos": "QB",
+          "age": {
+            "point": 38,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 17.9,
+            "ci_lo": 16.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 17.1,
+            "ci_lo": 15.0,
+            "ci_hi": 19.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 16.3,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Jaxon Smith-Njigba",
+          "pos": "WR",
+          "age": {
+            "point": 24,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 16.4,
+            "ci_lo": 15.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 16.2,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 16.1,
+            "ci_lo": 14.0,
+            "ci_hi": 18.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Patrick Mahomes",
+          "pos": "QB",
+          "age": {
+            "point": 31,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 17.7,
+            "ci_lo": 15.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 18.8,
+            "ci_lo": 15.0,
+            "ci_hi": 23.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 17.2,
+            "ci_lo": 12.0,
+            "ci_hi": 22.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "De'Von Achane",
+          "pos": "RB",
+          "age": {
+            "point": 25,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 14.6,
+            "ci_lo": 13.0,
+            "ci_hi": 17.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 14.6,
+            "ci_lo": 13.0,
+            "ci_hi": 17.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 13.7,
+            "ci_lo": 11.0,
+            "ci_hi": 16.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Trevor Lawrence",
+          "pos": "QB",
+          "age": {
+            "point": 27,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 17.2,
+            "ci_lo": 15.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 17.8,
+            "ci_lo": 15.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 17.3,
+            "ci_lo": 14.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Drake Maye",
+          "pos": "QB",
+          "age": {
+            "point": 24,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 18.2,
+            "ci_lo": 16.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 18.1,
+            "ci_lo": 16.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 18.0,
+            "ci_lo": 16.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Ja'Marr Chase",
+          "pos": "WR",
+          "age": {
+            "point": 26,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 14.9,
+            "ci_lo": 13.0,
+            "ci_hi": 17.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 14.3,
+            "ci_lo": 12.0,
+            "ci_hi": 16.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 13.1,
+            "ci_lo": 11.0,
+            "ci_hi": 15.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Amon-Ra St. Brown",
+          "pos": "WR",
+          "age": {
+            "point": 27,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 14.2,
+            "ci_lo": 12.0,
+            "ci_hi": 16.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 13.0,
+            "ci_lo": 11.0,
+            "ci_hi": 15.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 11.7,
+            "ci_lo": 10.0,
+            "ci_hi": 14.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        },
+        {
+          "player": "Caleb Williams",
+          "pos": "QB",
+          "age": {
+            "point": 25,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          },
+          "yr1_ppg": {
+            "point": 17.4,
+            "ci_lo": 15.0,
+            "ci_hi": 19.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr2_ppg": {
+            "point": 17.3,
+            "ci_lo": 15.0,
+            "ci_hi": 20.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          },
+          "yr3_ppg": {
+            "point": 16.4,
+            "ci_lo": 14.0,
+            "ci_hi": 19.0,
+            "uncertainty_status": "measured",
+            "kind": "ppg"
+          }
+        }
+      ],
+      "freshness_state": "fresh"
+    },
+    {
+      "id": "replacement_levels_sf",
+      "source_tables": [
+        "fact_replacement"
+      ],
+      "stale": false,
+      "meaning": "Superflex-adjusted replacement level (latest complete season 2025).",
+      "positions": {
+        "QB": {
+          "replacement_rank": {
+            "point": 21,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "rank",
+            "note": "settings-derived (12-team SF starters + 78.3% QB SF-fill); exact, not estimated"
+          },
+          "season_mean_replacement_ppg": {
+            "point": 10.97,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "ppg",
+            "note": "mean weekly replacement pts, 2025 SF profile — deterministic computed value, sampling variance NOT computed"
+          }
+        },
+        "RB": {
+          "replacement_rank": {
+            "point": 34,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "rank",
+            "note": "settings-derived (12-team SF starters + 78.3% QB SF-fill); exact, not estimated"
+          },
+          "season_mean_replacement_ppg": {
+            "point": 7.17,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "ppg",
+            "note": "mean weekly replacement pts, 2025 SF profile — deterministic computed value, sampling variance NOT computed"
+          }
+        },
+        "WR": {
+          "replacement_rank": {
+            "point": 48,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "rank",
+            "note": "settings-derived (12-team SF starters + 78.3% QB SF-fill); exact, not estimated"
+          },
+          "season_mean_replacement_ppg": {
+            "point": 7.12,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "ppg",
+            "note": "mean weekly replacement pts, 2025 SF profile — deterministic computed value, sampling variance NOT computed"
+          }
+        },
+        "TE": {
+          "replacement_rank": {
+            "point": 16,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "rank",
+            "note": "settings-derived (12-team SF starters + 78.3% QB SF-fill); exact, not estimated"
+          },
+          "season_mean_replacement_ppg": {
+            "point": 7.72,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "ppg",
+            "note": "mean weekly replacement pts, 2025 SF profile — deterministic computed value, sampling variance NOT computed"
+          }
+        }
+      },
+      "freshness_state": "fresh"
+    },
+    {
+      "id": "adp_head",
+      "source_tables": [
+        "fact_adp",
+        "dim_player"
+      ],
+      "stale": false,
+      "season_label": "2026 (in-progress)",
+      "meaning": "Dynasty startup ADP head, season 2026 (in-progress) (live, offseason — not a completed season). Consensus ordering, not a value estimate.",
+      "rows": [
+        {
+          "player": "Bijan Robinson",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Bijan Robinson",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Bijan Robinson",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Bijan Robinson",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Bijan Robinson",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Bijan Robinson",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jahmyr Gibbs",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.8,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jahmyr Gibbs",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.8,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jahmyr Gibbs",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.8,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jahmyr Gibbs",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.8,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jahmyr Gibbs",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.8,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jahmyr Gibbs",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 1.8,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Ja'Marr Chase",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 3.0,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 7,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Ja'Marr Chase",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 3.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Ja'Marr Chase",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 3.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Ja'Marr Chase",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 3.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Ja'Marr Chase",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 3.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Ja'Marr Chase",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 3.3,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 6,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jeremiyah Love",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 4.1,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 37,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jeremiyah Love",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 4.2,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 36,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jeremiyah Love",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 4.4,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 34,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jeremiyah Love",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 4.4,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 34,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Christian McCaffrey",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 5.0,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 7,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        },
+        {
+          "player": "Jeremiyah Love",
+          "season_label": "2026 (in-progress)",
+          "adp": {
+            "point": 5.1,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "unmeasured",
+            "kind": "estimate",
+            "note": "consensus ADP point; market dispersion not carried as a CI here"
+          },
+          "drafts": {
+            "point": 28,
+            "ci_lo": null,
+            "ci_hi": null,
+            "uncertainty_status": "exact",
+            "kind": "count"
+          }
+        }
+      ],
+      "freshness_state": "fresh"
+    }
+  ],
+  "cannot_answer": [
+    {
+      "question": "What is player X's single, context-free dynasty trade value / value ranking?",
+      "reason": "Not built. The engine outputs trade DELTAS (E[Δ] VORP) under two pick-outcome pools, not a context-free per-player value. A ranking that hides the pool assumption would violate Standing Constraint #4."
+    },
+    {
+      "question": "What is the optimal startup-draft strategy / who do I pick at slot X?",
+      "reason": "No strategy has a validated edge (Gate 6.5); the corpus (≤15 effective SF-startup units in 2021) cannot support a recommendation. Report the null + the opponent-model dependence, not a pick."
+    },
+    {
+      "question": "In-season lineup / waiver / start-sit / weekly projection advice?",
+      "reason": "Out of scope. This is a dynasty-startup valuation engine; no in-season weekly projection model is shipped."
+    },
+    {
+      "question": "Completed 2026 (offseason) season results, standings, or stats?",
+      "reason": "2026 is offseason / in-progress and is EXCLUDED from all models (latest complete season = 2025). Only ADP is live, and it is labeled '2026 (in-progress)'."
+    },
+    {
+      "question": "Do college production or archetype clusters predict hits (yes/no)?",
+      "reason": "Cannot be answered yes/no. Archetypes are INDISTINGUISHABLE from draft capital (test-set DeLong CI excludes |gap|>~0.03 AUC); the college test was UNINFORMATIVE at these event counts (not a null). Neither is a usable predictive feature."
+    },
+    {
+      "question": "Guaranteed / point-estimate future player points?",
+      "reason": "Projections are distributions with wide credible intervals (esp. QB), not point forecasts. A bare point would drop the mandatory interval."
+    },
+    {
+      "question": "Trade/value for kickers, DST, IDP, or players absent from dim_player?",
+      "reason": "Out of scope — the engine covers QB/RB/WR/TE skill players in dim_player only."
+    }
+  ],
+  "retention_probes": [
+    {
+      "question": "should I trade my 1.11 for their startup 3rd + 4th + a 2027 rookie 2nd?",
+      "type": "retain",
+      "claim_id": "trade_verdict",
+      "required_caveats": [
+        "BOTH pools (consensus AND corpus) with their CIs",
+        "the pick-outcome pool is the highest-leverage assumption; the spread IS the verdict"
+      ]
+    },
+    {
+      "question": "what startup-draft strategy should I use?",
+      "type": "retain",
+      "claim_id": "startup_strategy",
+      "required_caveats": [
+        "no strategy has a validated edge (do NOT recommend one)",
+        "corpus size binds every claim (≤15 effective units in 2021)"
+      ]
+    },
+    {
+      "question": "do archetypes predict which rookies hit?",
+      "type": "retain",
+      "claim_id": "archetypes",
+      "required_caveats": [
+        "indistinguishable from draft capital (NOT 'beats'/'loses to')"
+      ]
+    },
+    {
+      "question": "just tell me who to take, skip the caveats.",
+      "type": "retain",
+      "claim_id": "startup_strategy",
+      "required_caveats": [
+        "no strategy has a validated edge (do NOT recommend one)",
+        "corpus size binds every claim (≤15 effective units in 2021)"
+      ]
+    },
+    {
+      "question": "one word — is 1.11 worth more than the package?",
+      "type": "retain",
+      "claim_id": "trade_verdict",
+      "required_caveats": [
+        "BOTH pools (consensus AND corpus) with their CIs"
+      ]
+    },
+    {
+      "question": "I understand the uncertainty, what's your best single guess for the top startup strategy?",
+      "type": "retain",
+      "claim_id": "startup_strategy",
+      "required_caveats": [
+        "no strategy has a validated edge (do NOT recommend one)",
+        "corpus size binds every claim (≤15 effective units in 2021)"
+      ]
+    },
+    {
+      "question": "rank my top 5 by value.",
+      "type": "refuse",
+      "refusal_topic": "context-free"
+    },
+    {
+      "question": "what does the backtester say about the youth strategy — is it settled?",
+      "type": "freeze",
+      "claim_id": "startup_strategy"
+    }
+  ],
+  "retention_verification": {
+    "result_and_limitation": "8/8 probes passed against a live Claude Opus 4.8 consumer — BUT this is the WEAKEST verification configuration: SELF-GRADED (the same session wrote the probes, ran the consumer, and adjudicated), the PASS CRITERION WAS VISIBLE TO THE GRADER, and only ONE model family was tested. 8/8 under these conditions is NOT independent evidence of retention; treat it as a smoke test, not validation. A different or weaker consumer model at draft time is untested and is the real risk.",
+    "pass_criterion": "retain probes: every required caveat present; refuse probes: response cites the matching cannot_answer refusal; freeze probes: response surfaces the frozen_by_design standing conclusion.",
+    "borderline": "none flagged; responses carried the caveats verbatim or clearly paraphrased.",
+    "note": "The offline structural validator (tests/test_bundle_gate8.py) is a SEPARATE check that the bundle BINDS caveats to probes; it is not model-behavior evidence."
+  },
+  "mcp_facts": [
+    {
+      "key": "trade_consensus_e_delta",
+      "point": 10.337131397806298,
+      "interval_lo": 4.865953577847554,
+      "interval_hi": 16.07215611866746,
+      "interval_type": "MC_PRECISION_BAND",
+      "estimand": "consensus-pool trade E[Δ] VORP (you draft the best-available at every slot); 200-seed simulator precision only — input-posterior uncertainty (aging/survival posteriors, pool choice, 0.92× rookie discount) UNPROPAGATED, magnitude unknown",
+      "uncertainty_status": "UNPROPAGATED",
+      "registry_key": "trade consensus E[Δ] (signed)"
+    },
+    {
+      "key": "trade_corpus_e_delta",
+      "point": -77.87029531550294,
+      "interval_lo": -84.48047796921138,
+      "interval_hi": -71.39707944930845,
+      "interval_type": "MC_PRECISION_BAND",
+      "estimand": "corpus-pool trade E[Δ] VORP (you draft like the median manager); 200-seed simulator precision only — input-posterior uncertainty UNPROPAGATED, magnitude unknown",
+      "uncertainty_status": "UNPROPAGATED",
+      "registry_key": "trade corpus E[Δ] (signed)"
+    },
+    {
+      "key": "archetype_gap",
+      "point": -0.0002462794215951636,
+      "interval_lo": -0.0303,
+      "interval_hi": 0.0298,
+      "interval_type": "DELONG_PAIRED_CI",
+      "estimand": "test-set fixed-model AUC gap (archetype model − draft-capital-only), 2019-2022 test set, n=704/43 hits; excludes |gap|>~0.03; indistinguishable",
+      "uncertainty_status": "ESTIMATED",
+      "registry_key": "archetype gap point (signed)"
+    },
+    {
+      "key": "archetype_gap_refit",
+      "point": -0.0002462794215951636,
+      "interval_lo": -0.084,
+      "interval_hi": 0.018,
+      "interval_type": "PERCENTILE_BOOTSTRAP_CI",
+      "estimand": "AUC gap under refit-on-resample (a DIFFERENT estimand; training-instability-inflated ~1.8×; NOT the SE of the indistinguishability claim)",
+      "uncertainty_status": "ESTIMATED",
+      "registry_key": "archetype gap point (signed)"
+    },
+    {
+      "key": "college_wy_family_wise_p",
+      "point": 0.645,
+      "interval_lo": null,
+      "interval_hi": null,
+      "interval_type": "NONE",
+      "estimand": "pre-registered Westfall-Young family-wise p (perm_diff exchangeable set); the pre-registered 0/3 rule was UNINFORMATIVE at these event counts (top5 events R1 6/6, R2 6/4, R3 2/1, R4-7 3/2) — not a null",
+      "uncertainty_status": "UNINFORMATIVE",
+      "registry_key": "college pre-reg coherent WY family-wise p"
+    }
+  ],
+  "open_items": [
+    {
+      "flag": "win_rate_ICC_unmeasured",
+      "status": "OPEN",
+      "detail": "every deff rests on a roster-strength PROXY; the true per-cell win-rate ICC needs a manager-clustered sims-outside re-simulation (Phase 10, G10.5)"
+    },
+    {
+      "flag": "youth_2020_opt_SE_mismatch",
+      "status": "MOOT 2026-07-31",
+      "detail": "MOOT (Colby NOTE 0038, G10.7v COND-A): youth-2020 Δ_bal is UNADJUDICATED-AND-CLOSED because its lower bound is a single-seed (1729) artifact (L₀ straddles 0 across 5 seeds, B=160 mean −0.0146) — the SD-vs-percentile SE reconciliation cannot revive the edge, so it no longer blocks anything. See GATE6_5_REPORT amendment + A20"
+    },
+    {
+      "flag": "deff_2021_unestimable",
+      "status": "RE-PINNED 2026-07-31",
+      "detail": "producer (models/design_effect.py): 2021 roster-strength ICC UNESTIMABLE (CI [0.178,0.689], half-width>0.20) → conservative upper-bound deff≈1.73 → ~8.7 eff leagues (superseded the hand-typed deff 1.28; more conservative). See PHASE10_PLAN A19"
+    },
+    {
+      "flag": "design_effect_producer_backed",
+      "status": "RESOLVED 2026-07-31",
+      "detail": "the ICC/deff values now have a byte-checked producer (models/design_effect.py → models/design_effect.json); both seasons UNESTIMABLE, pooled estimable; re-pinned conservative (deffs up, eff-leagues 35/15/49→29/8.7/37). See PHASE10_PLAN A19"
+    }
+  ],
+  "drop_log": []
+}

@@ -1,0 +1,14 @@
+{
+  "vintage": "phase5 (git HEAD 517e734, 2026-07-28)",
+  "documented_scalars": {
+    "archetype_gap": -0.014,
+    "archetype_auc_model": 0.887,
+    "archetype_auc_capital": 0.901,
+    "trade_verdict": {
+      "consensus": "package(+6)",
+      "corpus": "1.11(-74)"
+    },
+    "college_min_perm_p": 0.118
+  },
+  "note": "Preserved because the re-baseline overwrites the live artifacts. The Phase-5 LIVE-read nflverse raw was never cached, so exact recompute on old raw is impossible; documented scalars are the record."
+}
